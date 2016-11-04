@@ -1,0 +1,14 @@
+{
+    "manifest_version": 2,
+    "name": "Yo, where'd my time go?",
+    "version": "0.0.1",
+
+    "background": {
+        "scripts": ["background.js"]
+    },
+
+    "description": "The time tracker of the Yo productivity suite.",
+    "permissions": [
+        "tabs"
+    ]
+}
