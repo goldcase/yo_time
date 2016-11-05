@@ -302,6 +302,10 @@ function getCurrentState() {
     });
 }
 
+function convertTimeToSeconds(time) {
+    return time/1000;
+}
+
 function getTotalTimeForSite(root_site) {
     debugMessage("Getting total time for site " + root_site);
     storage_area.get(SITE_INTERVAL_MAP_KEY, function(items) {
@@ -323,7 +327,7 @@ function getTotalTimeForSite(root_site) {
                     sum += interval[1] - interval[0];
                 }
                 console.log("Sum: ");
-                console.log(sum);
+                console.log(convertTimeToSeconds(sum));
             } else {
                 debugMessage("Root site ID is out of bounds of items[SITE_INTERVAL_MAP_KEY]. Error.");
             }
