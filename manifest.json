@@ -9,6 +9,7 @@
 
     "description": "The time tracker of the Yo productivity suite.",
     "permissions": [
-        "tabs"
+        "tabs",
+        "storage"
     ]
 }

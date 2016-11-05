@@ -4,15 +4,43 @@ var DEBUG_MESSAGE_PREFIX = "Debug log: ";
 var is_debug = true;
 var time_tracker_table = {};
 var current_tab_info = {};
+var ALL_LOG_KEY = "time_logs";
+var SITE_INTERVAL_MAP_KEY = "site_to_interval";
 
-function set_site(root_site, interval) {
-    debug_message("Adding " + interval + " to " + root_site + "!");
-
-    if (root_site in time_tracker_table) {
-        time_tracker_table[root_site] += interval;
-    } else {
-        time_tracker_table[root_site] = interval;
+function recordSiteInformation(root_site, start_time, end_time) {
+    return {
+        "start_time": start_time,
+        "end_time": end_time,
+        "root_site": root_site
     }
+}
+
+function checkIfBlacklisted(root_site) {
+}
+
+function setSite(root_site, start_time, end_time) {
+    debug_message("Adding " + start_time + ", " + end_time + " to " + root_site + "!");
+
+    chrome.storage.sync.get([ALL_LOG_KEY, SITE_INTERVAL_MAP_KEY], function(items) {
+        if (!(ALL_LOG_KEY in items)) {
+            items[ALL_LOG_KEY] = [];
+        }
+        items[ALL_LOG_KEY].push(recordSiteInformation(root_site, start_time, end_time));
+
+        if (!(SITE_INTERVAL_MAP_KEY in items)) {
+            items[SITE_INTERVAL_MAP_KEY] = {};
+        }
+
+        if (!(root_site in items[SITE_INTERVAL_MAP_KEY])) {
+            items[SITE_INTERVAL_MAP_KEY][root_site] = [];
+        }
+        items[SITE_INTERVAL_MAP_KEY][root_site].push([start_time, end_time]);
+
+        chrome.storage.sync.set(items);
+        chrome.storage.sync.get(null, function(items) {
+            console.log(items);
+        });
+    });
 }
 
 function startTracking(root_site, start_time) {
@@ -26,8 +54,7 @@ function finishTracking() {
 
     if ("url_start_time" in current_tab_info) {
         var current_time = new Date();
-        var elapsed_time = current_time - current_tab_info["url_start_time"];
-        set_site(current_tab_info["current_url"], elapsed_time);
+        setSite(current_tab_info["current_url"], current_tab_info["url_start_time"], current_time);
     }
 }
 
@@ -82,3 +109,5 @@ function trackActiveChange(activeInfo) {
 
 chrome.tabs.onUpdated.addListener(getActiveTab);
 chrome.tabs.onActivated.addListener(trackActiveChange);
+
+alert("Loaded Yo Time!");
