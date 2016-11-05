@@ -1,5 +1,7 @@
 "use strict";
 
+// TODO(johnnychang): Refactor this to use ES6 classes.
+
 // Debug flag.
 var IS_DEBUG = true;
 var DEBUG_MESSAGE_PREFIX = "Debug log: ";
@@ -72,13 +74,22 @@ function convertIdToRootSiteString(root_site_id, callback) {
     });
 }
 
+// Check if a root_site is already being tracked. If not, insert the root site
+// into the enum and update the corresponding enum-value based data structures.
 function insertRootSite(root_site, callback) {
+    debugMessage("Attempting to insert a root site into storage.");
     storage_area.get([ROOT_SITE_ENUM, INVERSE_ROOT_SITE_MAP, ENUM_COUNTER, SITE_INTERVAL_MAP_KEY], function(items) {
         if (!(root_site in items[ROOT_SITE_ENUM])) {
+            debugMessage("Pushing " + root_site + " onto our maps and enums. " +
+                "Printing Site interval map key:");
+
             items[INVERSE_ROOT_SITE_MAP].push(root_site);
             items[ROOT_SITE_ENUM][root_site] = items[ENUM_COUNTER];
+
             items[SITE_INTERVAL_MAP_KEY].push([]);
+            console.log(items[SITE_INTERVAL_MAP_KEY]);
             items[ENUM_COUNTER]++;
+            console.log("num items in site_interval_map: " + items[SITE_INTERVAL_MAP_KEY].length + " should match " + items[ENUM_COUNTER]);
 
             storage_area.set(items, function() {
                 callback();
@@ -90,11 +101,13 @@ function insertRootSite(root_site, callback) {
 }
 
 function initializeEnum() {
-    storage_area.get([ROOT_SITE_ENUM, ENUM_COUNTER, INVERSE_ROOT_SITE_MAP, SITE_INTERVAL_MAP_KEY], function(items) {
+    storage_area.get([ALL_LOG_KEY, ROOT_SITE_ENUM, ENUM_COUNTER, INVERSE_ROOT_SITE_MAP, SITE_INTERVAL_MAP_KEY], function(items) {
         if (!(ROOT_SITE_ENUM in items)) {
+            debugMessage("Initializing root site enum, the counter, root site map, and site interval map key.");
             items[ROOT_SITE_ENUM] = {};
             items[INVERSE_ROOT_SITE_MAP] = [];
             items[ENUM_COUNTER] = ENUM_COUNTER_START;
+            items[ALL_LOG_KEY] = [];
             items[SITE_INTERVAL_MAP_KEY] = [];
         }
         storage_area.set(items, function() {
@@ -148,7 +161,8 @@ function createInterval(start_time, end_time) {
 
 // Records a tracking interval for some site.
 // TODO(johnnychang): Refactor this to be smaller.
-function setSite(root_site, start_date, end_date) {
+function setSite(root_site, start_date, end_date, callback) {
+    debugMessage("Called setSite.");
     console.log(start_date);
     console.log(end_date);
     var start_time = start_date.getTime();
@@ -161,9 +175,6 @@ function setSite(root_site, start_date, end_date) {
     }
 
     storage_area.get([ALL_LOG_KEY, SITE_INTERVAL_MAP_KEY], function(items) {
-        if (!(ALL_LOG_KEY in items)) {
-            items[ALL_LOG_KEY] = [];
-        }
         convertRootSiteToId(root_site, function(root_site_id, error_message) {
             // Convert root_site string to ID and store the interval at the matching indices.
             if (root_site_id < 0) {
@@ -186,6 +197,7 @@ function setSite(root_site, start_date, end_date) {
                 // Update storage.
                 storage_area.set(items, function() {
                     debugMessage("Successfully set storage!");
+                    callback();
                 });
             }
         });
@@ -199,17 +211,31 @@ function startTracking(root_site, start_time) {
     current_tab_info[CURRENT_URL_START] = start_time;
 }
 
-function finishTracking() {
-    debugMessage("Called finish tracking!");
+function clearCurrentTabInfo() {
+    current_tab_info = {};
+}
 
+// Finishes tracking of the url stored in current_tab_info.
+function finishTracking(callback) {
+    debugMessage("Called finishTracking!");
+
+    console.log(current_tab_info);
+
+    // Check that there is a URL defined in current_tab_info.
     if (CURRENT_URL_START in current_tab_info) {
+        debugMessage("URL defined; proceeding to record interval.");
         var current_time = new Date();
         if (typeof current_tab_info[CURRENT_URL_START] !== "undefined" &&
                 current_tab_info[CURRENT_URL_START] instanceof Date) {
-            setSite(current_tab_info[CURRENT_URL],
-                    current_tab_info[CURRENT_URL_START],
-                    current_time);
+            // Record interval for current site.
+            setSite(current_tab_info[CURRENT_URL], current_tab_info[CURRENT_URL_START], current_time,
+                function() {
+                    clearCurrentTabInfo();
+                    callback();
+                });
         }
+    } else {
+        callback();
     }
 }
 
@@ -235,11 +261,14 @@ function parseUrlForRootSite(url_string) {
 }
 
 function trackTime(url_string) {
-    var root_site = parseUrlForRootSite(url_string);
-    finishTracking();
-    var start_time = new Date();
-    insertRootSite(root_site, function() {
-        startTracking(root_site, start_time);
+    finishTracking(function() {
+        debugMessage("Called trackTime callback. Attempting to reset startTracking.");
+        var root_site = parseUrlForRootSite(url_string);
+        debugMessage("Root_site: " + root_site);
+        var start_time = new Date();
+        insertRootSite(root_site, function() {
+            startTracking(root_site, start_time);
+        });
     });
 }
 
@@ -250,13 +279,17 @@ function checkForActiveTab() {
             return;
         } else if (tab_array.length > 0) {
             var active_tab = tab_array[0];
-            trackTime(active_tab.url);
+            if (active_tab.status == "complete") {
+                trackTime(active_tab.url);
+            }
         }
     });
 }
 
 function getActiveTab(tabId, changeInfo, tab) {
-    checkForActiveTab();
+    if (typeof tab !== "undefined" && tab.status == "complete") {
+        checkForActiveTab();
+    }
 }
 
 function trackActiveChange(activeInfo) {
@@ -279,18 +312,20 @@ function getTotalTimeForSite(root_site) {
             // Convert root_site string to ID and store the interval at the matching indices.
             if (root_site_id < 0) {
                 debugMessage(error_message);
-            } else {
-                if (root_site_id < items[SITE_INTERVAL_MAP_KEY].length) {
-                    console.log("Root site ID");
-                    console.log(root_site_id);
-                    var sum = 0.;
-                    for (var interval in items[SITE_INTERVAL_MAP_KEY][root_site_id]) {
-                        console.log(interval);
-                        sum += interval[1] - interval[0];
-                    }
-                    console.log("Sum: ");
-                    console.log(sum);
+            } else if (root_site_id < items[SITE_INTERVAL_MAP_KEY].length) {
+                console.log("Root site ID");
+                console.log(root_site_id);
+                
+                // Sum up the total time interval at the target root site.
+                var sum = 0.;
+                for (var interval in items[SITE_INTERVAL_MAP_KEY][root_site_id]) {
+                    console.log(interval);
+                    sum += interval[1] - interval[0];
                 }
+                console.log("Sum: ");
+                console.log(sum);
+            } else {
+                debugMessage("Root site ID is out of bounds of items[SITE_INTERVAL_MAP_KEY]. Error.");
             }
         });
     });
