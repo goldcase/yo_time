@@ -313,12 +313,12 @@ function getTotalTimeForSite(root_site) {
             if (root_site_id < 0) {
                 debugMessage(error_message);
             } else if (root_site_id < items[SITE_INTERVAL_MAP_KEY].length) {
-                console.log("Root site ID");
-                console.log(root_site_id);
-                
                 // Sum up the total time interval at the target root site.
                 var sum = 0.;
-                for (var interval in items[SITE_INTERVAL_MAP_KEY][root_site_id]) {
+                debugMessage("Printing intervals.");
+                var intervals = items[SITE_INTERVAL_MAP_KEY][root_site_id];
+                for (var interval_idx in intervals) {
+                    var interval = intervals[interval_idx];
                     console.log(interval);
                     sum += interval[1] - interval[0];
                 }
