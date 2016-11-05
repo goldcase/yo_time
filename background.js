@@ -2,26 +2,56 @@
 
 var DEBUG_MESSAGE_PREFIX = "Debug log: ";
 var is_debug = true;
-var time_tracker_table = {};
 var current_tab_info = {};
 var ALL_LOG_KEY = "time_logs";
 var SITE_INTERVAL_MAP_KEY = "site_to_interval";
+var BLACKLIST_KEY = "blacklist";
+var THRESHOLD_INTERVAL = new Date(5000);
 
 function recordSiteInformation(root_site, start_time, end_time) {
     return {
         "start_time": start_time,
         "end_time": end_time,
         "root_site": root_site
-    }
+    };
 }
 
-function checkIfBlacklisted(root_site) {
+function addToBlacklist(root_site) {
+    chrome.storage.local.get(BLACKLIST_KEY, function(items) {
+        if (!(BLACKLIST_KEY in items)) {
+            items[BLACKLIST_KEY] = new Set();
+        }
+        items[BLACKLIST_KEY].add(root_site);
+    });
+}
+
+function removeFromBlacklist(root_site) {
+    chrome.storage.local.get(BLACKLIST_KEY, function(items) {
+        if (!(BLACKLIST_KEY in items)) {
+            items[BLACKLIST_KEY] = new Set();
+        }
+        items[BLACKLIST_KEY].delete(root_site);
+    });
+}
+
+function checkIfBlacklisted(root_site, callback) {
+    chrome.storage.local.get(BLACKLIST_KEY, function(items) {
+        if (!(BLACKLIST_KEY in items)) {
+            items[BLACKLIST_KEY] = new Set();
+        }
+        callback(items[BLACKLIST_KEY].has(root_site));
+    });
 }
 
 function setSite(root_site, start_time, end_time) {
-    debug_message("Adding " + start_time + ", " + end_time + " to " + root_site + "!");
+    debugMessage("Adding " + start_time + ", " + end_time + " to " + root_site + "!");
 
-    chrome.storage.sync.get([ALL_LOG_KEY, SITE_INTERVAL_MAP_KEY], function(items) {
+    if (end_time - start_time < THRESHOLD_INTERVAL) {
+        debugMessage("Not adding to storage if under threshold of " + THRESHOLD_INTERVAL);
+        return;
+    }
+
+    chrome.storage.local.get([ALL_LOG_KEY, SITE_INTERVAL_MAP_KEY], function(items) {
         if (!(ALL_LOG_KEY in items)) {
             items[ALL_LOG_KEY] = [];
         }
@@ -34,23 +64,27 @@ function setSite(root_site, start_time, end_time) {
         if (!(root_site in items[SITE_INTERVAL_MAP_KEY])) {
             items[SITE_INTERVAL_MAP_KEY][root_site] = [];
         }
+
         items[SITE_INTERVAL_MAP_KEY][root_site].push([start_time, end_time]);
 
-        chrome.storage.sync.set(items);
-        chrome.storage.sync.get(null, function(items) {
-            console.log(items);
+        chrome.storage.local.set(items, function() {
+            debugMessage("Successfully set storage!");
+            chrome.storage.local.get(null, function(items) {
+                console.log("Current state of items:");
+                console.log(items);
+            });
         });
     });
 }
 
 function startTracking(root_site, start_time) {
-    debug_message("Called startTracking on " + root_site + "!");
+    debugMessage("Called startTracking on " + root_site + "!");
     current_tab_info["current_url"] = root_site;
     current_tab_info["url_start_time"] = start_time;
 }
 
 function finishTracking() {
-    debug_message("Called finish tracking!");
+    debugMessage("Called finish tracking!");
 
     if ("url_start_time" in current_tab_info) {
         var current_time = new Date();
@@ -58,7 +92,7 @@ function finishTracking() {
     }
 }
 
-function debug_message(msg) {
+function debugMessage(msg) {
     if (is_debug && typeof msg === "string") {
         console.log(DEBUG_MESSAGE_PREFIX + msg);
     }
@@ -90,7 +124,7 @@ function checkForActiveTab() {
     chrome.tabs.query(createActiveQuery(), function(tab_array) {
         console.log(tab_array);
         if (tab_array.length > 1) {
-            debug_message("Tab array length should not be greater than 1.");
+            debugMessage("Tab array length should not be greater than 1.");
             return;
         } else if (tab_array.length > 0) {
             var active_tab = tab_array[0];
