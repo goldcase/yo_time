@@ -1,3 +1,6 @@
+/*
+ * Analytics.js takes care of aggregation of tracker data.
+ */
 function convertTimeToSeconds(time) {
     return time/1000;
 }
