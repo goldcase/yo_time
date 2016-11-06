@@ -1,3 +1,4 @@
+/* jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4, maxerr:50 */ /* global define */
 'use strict';
 
 /*
@@ -23,12 +24,6 @@ var ROOT_SITE_ENUM = 'root_site_enum';
 var INVERSE_ROOT_SITE_MAP = 'root_site_id_to_name';
 var ENUM_COUNTER = 'root_site_enum_counter';
 var ENUM_COUNTER_START = 0;
-
-// Sites you want to induce latency in.
-var BLACKLIST_KEY = 'blacklist';
-
-// Sites you don't want to track.
-var WHITELIST_KEY = 'whitelist';
 
 var ALL_GOOD = '';
 var ROOT_SITE_ID_STRING = 'root site ID string';
@@ -129,33 +124,6 @@ function recordSiteInformation(root_site_id, start_time, end_time) {
         END_TIME: end_time,
         ROOT_SITE_ID: root_site_id
     };
-}
-
-function addToBlacklist(root_site) {
-    storage_area.get(BLACKLIST_KEY, function(items) {
-        if (!(BLACKLIST_KEY in items)) {
-            items[BLACKLIST_KEY] = new Set();
-        }
-        items[BLACKLIST_KEY].add(root_site);
-    });
-}
-
-function removeFromBlacklist(root_site) {
-    storage_area.get(BLACKLIST_KEY, function(items) {
-        if (!(BLACKLIST_KEY in items)) {
-            items[BLACKLIST_KEY] = new Set();
-        }
-        items[BLACKLIST_KEY].delete(root_site);
-    });
-}
-
-function checkIfBlacklisted(root_site, callback) {
-    storage_area.get(BLACKLIST_KEY, function(items) {
-        if (!(BLACKLIST_KEY in items)) {
-            items[BLACKLIST_KEY] = new Set();
-        }
-        callback(items[BLACKLIST_KEY].has(root_site));
-    });
 }
 
 function createInterval(start_time, end_time) {

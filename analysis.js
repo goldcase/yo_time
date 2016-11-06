@@ -1,6 +1,10 @@
 /*
  * Analytics.js takes care of aggregation of tracker data.
  */
+
+// Top level features:
+// Get day-by-day activity for a website.
+
 function convertTimeToSeconds(time) {
     return time / 1000;
 }
