@@ -2,6 +2,7 @@
 
 /*
  * Tracker.js has the sole responsibility of tracking website usage.
+ * TODO(johnnychang): Run jslint.
  */
 
 // TODO(johnnychang): Refactor this to use ES6 classes.
