@@ -12,7 +12,6 @@ var END_TIME = "end_time";
 var ROOT_SITE_ID = "id";
 var CURRENT_URL = "current_url";
 var CURRENT_URL_START = "current_url_start";
-var ALL_LOG_KEY = "time_logs";
 var SITE_INTERVAL_MAP_KEY = "site_to_interval";
 var THRESHOLD_INTERVAL = (new Date(5000)).getTime() - (new Date()).getTime();
 var ROOT_SITE_ENUM = "root_site_enum";
@@ -101,13 +100,12 @@ function insertRootSite(root_site, callback) {
 }
 
 function initializeEnum() {
-    storage_area.get([ALL_LOG_KEY, ROOT_SITE_ENUM, ENUM_COUNTER, INVERSE_ROOT_SITE_MAP, SITE_INTERVAL_MAP_KEY], function(items) {
+    storage_area.get([ROOT_SITE_ENUM, ENUM_COUNTER, INVERSE_ROOT_SITE_MAP, SITE_INTERVAL_MAP_KEY], function(items) {
         if (!(ROOT_SITE_ENUM in items)) {
             debugMessage("Initializing root site enum, the counter, root site map, and site interval map key.");
             items[ROOT_SITE_ENUM] = {};
             items[INVERSE_ROOT_SITE_MAP] = [];
             items[ENUM_COUNTER] = ENUM_COUNTER_START;
-            items[ALL_LOG_KEY] = [];
             items[SITE_INTERVAL_MAP_KEY] = [];
         }
         storage_area.set(items, function() {
@@ -174,7 +172,7 @@ function setSite(root_site, start_date, end_date, callback) {
         return;
     }
 
-    storage_area.get([ALL_LOG_KEY, SITE_INTERVAL_MAP_KEY], function(items) {
+    storage_area.get([SITE_INTERVAL_MAP_KEY], function(items) {
         convertRootSiteToId(root_site, function(root_site_id, error_message) {
             // Convert root_site string to ID and store the interval at the matching indices.
             if (root_site_id < 0) {
@@ -186,7 +184,6 @@ function setSite(root_site, start_date, end_date, callback) {
                     typeof end_time !== "undefined") {
                     var interval = createInterval(start_time, end_time);
                     if (interval.length == 2) {
-                        items[ALL_LOG_KEY].push(recordSiteInformation(root_site_id, start_time, end_time));
                         console.log(items[SITE_INTERVAL_MAP_KEY]);
                         console.log("Root site id: " + root_site_id);
                         console.log(interval);
@@ -302,36 +299,9 @@ function getCurrentState() {
     });
 }
 
-function convertTimeToSeconds(time) {
-    return time/1000;
-}
-
-function getTotalTimeForSite(root_site) {
-    debugMessage("Getting total time for site " + root_site);
-    storage_area.get(SITE_INTERVAL_MAP_KEY, function(items) {
-        debugMessage("Storage area retrieved.");
-        console.log(items);
-        convertRootSiteToId(root_site, function(root_site_id, error_message) {
-            console.log("Root site converted to ID " + root_site_id);
-            // Convert root_site string to ID and store the interval at the matching indices.
-            if (root_site_id < 0) {
-                debugMessage(error_message);
-            } else if (root_site_id < items[SITE_INTERVAL_MAP_KEY].length) {
-                // Sum up the total time interval at the target root site.
-                var sum = 0.;
-                debugMessage("Printing intervals.");
-                var intervals = items[SITE_INTERVAL_MAP_KEY][root_site_id];
-                for (var interval_idx in intervals) {
-                    var interval = intervals[interval_idx];
-                    console.log(interval);
-                    sum += interval[1] - interval[0];
-                }
-                console.log("Sum: ");
-                console.log(convertTimeToSeconds(sum));
-            } else {
-                debugMessage("Root site ID is out of bounds of items[SITE_INTERVAL_MAP_KEY]. Error.");
-            }
-        });
+function clearStorageArea() {
+    storage_area.clear(function() {
+        debugMessage("Cleared storage area!");
     });
 }
 

@@ -4,7 +4,10 @@
     "version": "0.0.1",
 
     "background": {
-        "scripts": ["background.js"]
+        "scripts": [
+            "tracker.js",
+            "analysis.js"
+        ]
     },
 
     "description": "The time tracker of the Yo productivity suite.",
