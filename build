@@ -3,4 +3,3 @@
 from subprocess import call
 
 call(["fixjsstyle", "tracker.js"])
-call(["fixjsstyle", "analysis.js"])
