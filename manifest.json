@@ -5,9 +5,7 @@
 
     "background": {
         "scripts": [
-            "tracker.js",
-            "analysis.js",
-            "customize.js"
+            "tracker.js"
         ]
     },
 
