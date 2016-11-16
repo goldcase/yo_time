@@ -4,6 +4,11 @@
 /*
  * Tracker.js has the sole responsibility of tracking website usage.
  * TODO(johnnychang): Run jslint.
+ * TODO(johnnychang): Remove unused variables.
+ * TODO(johnnychang): Refactor classes.
+ * TODO(johnnychang): Fix error logging.
+ * TODO(johnnychang): Before submission, turn off debug logging.
+ * TODO(johnnychang): Fix negative interval length bug.
  */
 
 // TODO(johnnychang): Refactor this to use ES6 classes.
@@ -12,17 +17,9 @@
 var IS_DEBUG = true;
 var IS_ERROR = true;
 
-var DEBUG_LOG_PREFIX = 'Debug log: ';
-var ERROR_LOG_PREFIX = 'Error: ';
+var DEBUG_LOG_PREFIX = 'DEBUG: ';
+var ERROR_LOG_PREFIX = 'ERROR: ';
 
-var ALL_GOOD = '';
-var ROOT_SITE_ID_STRING = 'root site ID string';
-var ROOT_SITE_STRING = 'root site string';
-
-var INTERVAL_START_IDX = 0;
-var INTERVAL_END_IDX = 1;
-
-var current_tab_info = {};
 var storage_area = chrome.storage.local;
 
 // Class constants.
@@ -40,7 +37,7 @@ class Interval {
             errorLog('Error: Attempted to construct interval object with non-Date parameters.');
         }
 
-        this.start = !!interval_start && interval_start instanceof Date ? interval_start.getTime() : (new Date()).getTime();
+        this.start = !!interval_start && interval_start instanceof Date ? interval_start.getTime() : interval_start;
         this.end = !!interval_end && interval_end instanceof Date ? interval_end.getTime() : interval_end;
     }
 
@@ -171,7 +168,8 @@ class TrackedWebsite {
             var candidate_interval_length = candidate_interval.getLength();
             if (candidate_interval_length > max_interval.getLength()) {
                 max_interval = candidate_interval;
-            } else if (candidate_interval_length < min_interval.getLength()) {
+            }
+            if (candidate_interval_length < min_interval.getLength()) {
                 min_interval = candidate_interval;
             }
         }
@@ -179,6 +177,7 @@ class TrackedWebsite {
         return this.createExtremaObject(min_interval, max_interval);
     }
 
+    // Negative interval error seems to occur during serialization/deserialization.
     serialize() {
         debugLog('Called serialize on:');
         console.log(this);
@@ -203,9 +202,7 @@ class TrackedWebsite {
                     var start_time = target_values[interval_idx]['start'];
                     var end_time = target_values[interval_idx]['end'];
                     var target_interval = new Interval(start_time, end_time);
-
                     debugLog(target_interval.getLength());
-
                     // TODO(johnnychang): Handle error message here.
                     tracked_website.addInterval(target_interval, '', function() {
                         debugLog('Added interval to unpickled TrackedWebsite.');
@@ -213,6 +210,7 @@ class TrackedWebsite {
                 }
             }
         }
+
         return tracked_website;
     }
 };
@@ -382,11 +380,11 @@ class Analyzer {
     }
 };
 
-var current_interval = new Interval(null, null);
+var current_interval = new Interval(new Date(), null);
 var current_site_name = '';
 
 function resetTrackingVariables() {
-    current_interval = new Interval(null, null);
+    current_interval = new Interval(new Date(), null);
     current_site_name = '';
 }
 
@@ -449,6 +447,7 @@ function trackTime(url_string) {
         if (!!errorMessage) {
             errorLog(errorMessage);
         }
+        current_interval.setStart(new Date());
     });
 }
 
