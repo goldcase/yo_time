@@ -1,10 +1,18 @@
 {
     "manifest_version": 2,
     "name": "Yo, where'd my time go?",
-    "version": "0.0.1",
+    "version": "0.0.3",
+
+    "browser_action": {
+        "default_title": "Yo Time Dashboard",
+        "default_icon": "yo_small.png",
+        "default_popup": "dashboard.html"
+    },
 
     "background": {
         "scripts": [
+            "common_utils.js",
+            "constants.js",
             "tracker.js"
         ]
     },

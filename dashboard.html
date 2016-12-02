@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Dashboard</title>
+</head>
+<body>
+
+<h1>
+	Yo Time Dashboard
+</h1>
+
+<input type="text" id="website-name" placeholder="Enter the website you want to analyze...">
+<input type="date" id="start-date" placeholder="Enter the start time of the period you want to analyze...">
+<input type="date" id="end-date" placeholder="Enter the end time of the period you want to analyze...">
+
+<input id="submit-form" type="button" value="submit">
+
+<div class="number-container">
+	Maximum time spent on <span class="site-name"></span>
+	<h2 id="max-time"></h2>	
+</div>
+
+<div class="number-container">
+	Minimum time spent on <span class="site-name"></span>
+	<h2 id="min-time"></h2>	
+</div>
+
+<div class="number-container">
+	Average time spent on <span class="site-name"></span>
+	<h2 id="avg-time"></h2>	
+</div>
+
+<script src="common_utils.js"></script>
+<script src="constants.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

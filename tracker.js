@@ -8,17 +8,7 @@
  * TODO(johnnychang): Refactor classes.
  * TODO(johnnychang): Fix error logging.
  * TODO(johnnychang): Before submission, turn off debug logging.
- * TODO(johnnychang): Fix negative interval length bug.
  */
-
-// TODO(johnnychang): Refactor this to use ES6 classes.
-
-// Debug flag.
-var IS_DEBUG = true;
-var IS_ERROR = true;
-
-var DEBUG_LOG_PREFIX = 'DEBUG: ';
-var ERROR_LOG_PREFIX = 'ERROR: ';
 
 var storage_area = chrome.storage.local;
 
@@ -96,6 +86,7 @@ class TrackedWebsite {
             return;
         }
 
+        /*
         console.log(this.usage_intervals);
         debugLog('Interval length before push: ' + this.usage_intervals.length);
         this.usage_intervals.push(interval);
@@ -103,6 +94,7 @@ class TrackedWebsite {
         console.log('Pushed interval onto THIS usage interval list.');
         console.log(interval);
         console.log(this);
+        */
         callback();
     }
 
@@ -501,18 +493,6 @@ function clearStorageArea() {
     });
 }
 
-function debugLog(debug_message) {
-    if (typeof debug_message === 'string') {
-        console.log(DEBUG_LOG_PREFIX + debug_message);
-    }
-}
-
-function errorLog(error_message) {
-    if (typeof debug_message === 'string') {
-        console.log(ERROR_LOG_PREFIX + error_message);
-    }
-}
-
 function initialize() {
     website_container = new WebsiteContainer(storage_area);
     analyzer = new Analyzer(website_container);
@@ -529,6 +509,80 @@ chrome.tabs.onCreated.addListener(function(tabId, changeInfo, tab) {
     debugLog('Received created event.');
     getActiveTab(tabId, changeInfo, tab);
 });
+
 chrome.tabs.onActivated.addListener(trackActiveChange);
+
+function createAnalyticsResponse(success, errorMessage, result) {
+    debugLog("Creating analytics response.");
+    var ret = {
+        "success": success,
+        "error_message": errorMessage,
+        "result": result 
+    };
+    console.log(ret);
+    return ret;
+}
+
+// TODO(johnnychang): Increase granularity of checking this request object for errors.
+// Validate values of each property.
+function validateRequest(request) {
+    console.log(request);
+    console.log(SITE_PROPERTY);
+    return request.hasOwnProperty(SITE_PROPERTY) &&
+        request.hasOwnProperty(OP_PROPERTY) &&
+        request.hasOwnProperty(START_TIME_PROPERTY) &&
+        request.hasOwnProperty(END_TIME_PROPERTY);
+}
+
+// TODO(johnnychang): Create Router class.
+function routeAnalyticsRequest(analyzer, request, callback) {
+    debugLog("Routing analytics request.");
+    var router = {};
+    router[MAX_OP] = analyzer.getMaxBetween;
+    router[MIN_OP] = analyzer.getMinBetween;
+    router[AVG_OP] = analyzer.getAvgBetween;
+
+    var candidate_operation = request[OP_PROPERTY];
+    if (router.hasOwnProperty(candidate_operation)) {
+        if (candidate_operation === MAX_OP) {
+            analyzer.getMaxBetween(request[START_TIME_PROPERTY], request[END_TIME_PROPERTY], request[SITE_PROPERTY], callback);
+        } else if (candidate_operation === MIN_OP) {
+            analyzer.getMinBetween(request[START_TIME_PROPERTY], request[END_TIME_PROPERTY], request[SITE_PROPERTY], callback);
+        } else if (candidate_operation === AVG_OP) {
+            analyzer.getAverageBetween(request[START_TIME_PROPERTY], request[END_TIME_PROPERTY], request[SITE_PROPERTY], callback);
+        } else {
+            callback(null, "Unable to identify the requested operation during analytics routing.");
+        }
+    } else {
+        // Routing failed.
+        callback(null, "Unable to identify the requested operation during analytics routing.");
+    }
+}
+
+function processAnalyticsRequest(request, sender, sendResponse) {
+    debugLog("Received message request to process.");
+    if (validateRequest(request)) {
+        debugLog("Request passed validation!");
+        routeAnalyticsRequest(analyzer, request, function(result, errorMessage) {
+            var response = null;
+            if (!!errorMessage) {
+                debugLog("There was some error that occurred: " + errorMessage);
+                response = createAnalyticsResponse(false, errorMessage, null);
+            } else {
+                debugLog("No error occurred. sending response...");
+                response = createAnalyticsResponse(true, "", result);
+            }
+            console.log(response);
+            console.log(sendResponse);
+            sendResponse(response);
+        });
+    } else {
+        debugLog("Request failed validation.");
+        sendResponse(createAnalyticsResponse(false, "Analytics request validation failed.", null));
+    }
+    return true;
+}
+
+chrome.runtime.onMessage.addListener(processAnalyticsRequest);
 
 alert('Loaded Yo Time!');
